@@ -17,8 +17,8 @@ def initialize_session_state():
         "score": 0,
         "crisis_situation": "",
         "crisis_options": [],
-        "effective_strategies": {}, # Step 3의 정답 전략 매핑
-        "best_crisis_strategies": {}, # Step 5의 정답 전략 매핑
+        "effective_strategies_map": {}, # Step 3의 정답 전략 매핑 (이름 변경)
+        "best_crisis_strategies_map": {}, # Step 5의 정답 전략 매핑 (이름 변경)
         "random_events_data": {}, # Step 8의 이벤트 데이터
         "step3_score_earned": 0, # Step 3에서 획득 점수
         "step5_score_earned": 0, # Step 5에서 획득 점수
@@ -31,6 +31,8 @@ def initialize_session_state():
         "current_event_name": None, # Step 8 현재 이벤트 이름
         "current_event_options": [], # Step 8 현재 이벤트 옵션
         "current_event_best_strategy": "", # Step 8 현재 이벤트 최적 전략
+        "step7_state": "pending", # Step 7 진행 상태 관리
+        "step8_state": "pending", # Step 8 진행 상태 관리
     }
 
     # 게임 재시작 시 기존 세션 상태를 모두 삭제하고 재초기화
@@ -212,7 +214,7 @@ elif st.session_state.step == 3:
         "🏆 대기업으로부터 투자 제안": ["지분 일부 매각", "전략적 제휴", "거절", "조건 재협상", "지분 공동 소유"],
         "🌍 글로벌 시장 진출 기회": ["현지화 전략", "글로벌 광고 캠페인", "온라인 직판", "외국 파트너와 제휴", "해외 공장 설립"]
     }
-    effective_strategies_mapping = {
+    effective_strategies_map_data = { # 이름 변경: effective_strategies_map_data
         "⚠️ 대규모 고객 데이터 유출 발생": "보안 시스템 전면 재구축",
         "📈 갑작스러운 수요 폭증": "생산 라인 확장",
         "💸 원자재 가격 급등": "공급처 다변화",
@@ -221,7 +223,7 @@ elif st.session_state.step == 3:
         "🏆 대기업으로부터 투자 제안": "지분 일부 매각",
         "🌍 글로벌 시장 진출 기회": "현지화 전략"
     }
-    st.session_state.effective_strategies = effective_strategies_mapping # 세션에 저장
+    st.session_state.effective_strategies_map = effective_strategies_map_data # 세션에 저장
 
     if not st.session_state.situation:
         st.session_state.situation, st.session_state.options = random.choice(list(situations.items()))
@@ -234,7 +236,7 @@ elif st.session_state.step == 3:
         st.session_state.step3_strategy_selected = strategy # 단계별 전략 기록
         
         # 점수 계산 및 저장 (로컬 변수 사용 없이 직접 세션 상태에 접근)
-        if strategy == st.session_state.effective_strategies.get(st.session_state.situation):
+        if strategy == st.session_state.effective_strategies_map.get(st.session_state.situation):
             st.session_state.score += 10
             st.session_state.step3_score_earned = 10
             st.session_state.selected_strategy_feedback = f"선택한 전략: **{strategy}** (획득 점수: 10점)"
@@ -285,22 +287,25 @@ elif st.session_state.step == 4:
 elif st.session_state.step == 5:
     show_speech("“국가적 위기 발생!”", "경제, 정치, 국제 환경이 급변하고 있어. 대응 전략이 필요해.", "https://raw.githubusercontent.com/dddowobbb/16-1/main/talking%20ceo.png")
 
-    # Step 5 관련 데이터 정의 및 세션에 저장
+    # Step 5 관련 데이터 정의
     crisis_situations = {
         "📉 한국 외환시장 급변 (원화 가치 급락)": ["환 헤지 강화", "수출 확대", "정부와 협력", "외환 보유 확대", "위기 커뮤니케이션"],
-        "🇺🇸 미 연준의 기준금리 급등": ["대출 축소", "내수 집중 전략", "고금리 대비 자산 조정", "비용 구조 개선", "긴축 경영"],
-        "🗳️ 윤석열 대통령 탄핵 가결": ["리스크 분산 경영", "정치 모니터링 강화", "내부 의사결정 체계 정비", "단기 전략 전환", "위기 대비 태스크포스 운영"],
-        "🇺🇸 트럼프 대선 재당선": ["미국 중심 전략 강화", "공급망 재편", "관세 대비 물류 최적화", "현지 생산 강화", "미국 투자 확대"],
+        "🇺🇸 미 연준의 기준금리 인상": ["대출 축소", "내수 집중 전략", "고금리 대비 자산 조정", "비용 구조 개선", "긴축 경영"],
+        "🗳️ 정치적 불확실성 증가": ["리스크 분산 경영", "정치 모니터링 강화", "내부 의사결정 체계 정비", "단기 전략 전환", "위기 대비 태스크포스 운영"],
+        "🇺🇸 트럼프 대통령 재취임": ["미국 중심 전략 강화", "공급망 재편", "관세 대비 물류 최적화", "현지 생산 강화", "미국 투자 확대"],
         "🛃 주요 국가의 관세 인상 정책": ["무역 파트너 다변화", "현지 생산 확대", "비관세 수출 전략", "신시장 개척", "가격 재설정"]
     }
-    best_crisis_strategies_mapping = {
-        "📉 한국 외환시장 급변 (원화 가치 급락)": "환 헤지 강화",
-        "🇺🇸 미 연준의 기준금리 급등": "고금리 대비 자산 조정",
-        "🗳️ 윤석열 대통령 탄핵 가결": "리스크 분산 경영",
-        "🇺🇸 트럼프 대선 재당선": "미국 중심 전략 강화",
-        "🛃 주요 국가의 관세 인상 정책": "무역 파트너 다변화"
-    }
-    st.session_state.best_crisis_strategies = best_crisis_strategies_mapping # 세션에 저장
+    
+    # 🚨 중요: best_strategies_map_data를 Step 5 진입 시 한 번만 정의하여 세션에 저장
+    if "best_crisis_strategies_map" not in st.session_state or not st.session_state.best_crisis_strategies_map:
+        best_strategies_map_data = { # 이름 변경: best_strategies_map_data
+            "📉 한국 외환시장 급변 (원화 가치 급락)": "환 헤지 강화",
+            "🇺🇸 미 연준의 기준금리 인상": "고금리 대비 자산 조정",
+            "🗳️ 정치적 불확실성 증가": "리스크 분산 경영",
+            "🇺🇸 트럼프 대통령 재취임": "공급망 재편", # 트럼프 재취임 시 '공급망 재편'이 가장 적절한 대응 전략으로 판단
+            "🛃 주요 국가의 관세 인상 정책": "무역 파트너 다변화"
+        }
+        st.session_state.best_crisis_strategies_map = best_strategies_map_data # 세션에 저장
 
     if not st.session_state.crisis_situation:
         st.session_state.crisis_situation, st.session_state.crisis_options = random.choice(list(crisis_situations.items()))
@@ -310,9 +315,10 @@ elif st.session_state.step == 5:
     crisis_strategy = st.radio("🧠 대응 전략을 선택하세요:", st.session_state.crisis_options)
 
     if st.button("전략 확정"):
-        st.session_state.step5_strategy_selected = crisis_strategy # 단계별 전략 기록
+        st.session_state.step5_strategy_selected = crisis_strategy # ✅ 단계별 전략 기록
 
-        if crisis_strategy == st.session_state.best_crisis_strategies.get(st.session_state.crisis_situation):
+        # 세션 상태에 저장된 best_crisis_strategies_map을 사용하여 점수 계산
+        if crisis_strategy == st.session_state.best_crisis_strategies_map.get(st.session_state.crisis_situation):
             st.session_state.score += 10
             st.session_state.step5_score_earned = 10
             st.session_state.selected_strategy_feedback = f"국가적 위기 속 **{crisis_strategy}** 전략은 뛰어난 선택이었어. (획득 점수: 10점)"
@@ -321,6 +327,7 @@ elif st.session_state.step == 5:
             st.session_state.step5_score_earned = 5
             st.session_state.selected_strategy_feedback = f"국가적 위기 속 **{crisis_strategy}** 전략도 나쁘지 않았어. (획득 점수: 5점)"
 
+        # Step 6으로 이동. Step 6에서 다음 버튼이 있음.
         st.session_state.step = 6
         st.rerun()
 
@@ -333,10 +340,11 @@ elif st.session_state.step == 6:
 
     if score_earned_this_step == 10:
         title = "“최고의 경영자군!”"
-        subtitle = st.session_state.selected_strategy_feedback
+        # subtitle은 Step 5에서 이미 세션에 저장된 feedback 메시지를 사용
+        subtitle = st.session_state.selected_strategy_feedback + f" 총 점수: {st.session_state.score}점"
     else:
         title = "“괜찮은 성과지만 아직 성장 가능성이 보여.”"
-        subtitle = st.session_state.selected_strategy_feedback
+        subtitle = st.session_state.selected_strategy_feedback + f" 총 점수: {st.session_state.score}점"
 
     show_speech(title, subtitle, "https://raw.githubusercontent.com/dddowobbb/16-1/main/talking%20ceo.png")
     st.markdown("### Step 6: 중간 평가")
@@ -348,9 +356,8 @@ elif st.session_state.step == 6:
         del st.session_state.step5_score_earned
     if "step5_strategy_selected" in st.session_state:
         del st.session_state.step5_strategy_selected
-    st.session_state.crisis_situation = ""
-    st.session_state.crisis_options = []
-    st.session_state.selected_strategy_feedback = ""
+    # crisis_situation, crisis_options는 Step 5에서 전략 확정 시 이미 초기화됨
+    st.session_state.selected_strategy_feedback = "" # 피드백 메시지 초기화
 
     # 사용자 제어권 보장 (다음 버튼)
     if st.button("다음 이벤트 ▶️"):
@@ -369,9 +376,7 @@ elif st.session_state.step == 7:
     }
 
     # Step 7의 상태를 별도로 관리하여 중복 실행 방지
-    if "step7_state" not in st.session_state:
-        st.session_state.step7_state = "pending" # "pending" 또는 "done"
-
+    # initialize_session_state()에서 기본값 "pending"으로 설정됨
     if st.session_state.step7_state == "pending":
         show_speech("“요즘 직원들 분위기가 심상치 않아...”", "사기 저하, 인사 갈등, 생산성 저하 문제가 보고됐어. 어떻게 대응할까?", "https://raw.githubusercontent.com/dddowobbb/16-1/main/talking%20ceo.png")
         st.markdown("### Step 7: 내부 문제 해결 전략 선택")
@@ -436,9 +441,7 @@ elif st.session_state.step == 8:
         }
 
     # Step 8의 상태를 별도로 관리하여 중복 실행 방지
-    if "step8_state" not in st.session_state:
-        st.session_state.step8_state = "pending"
-
+    # initialize_session_state()에서 기본값 "pending"으로 설정됨
     if st.session_state.step8_state == "pending":
         show_speech("“뜻밖의 일이 벌어졌어!”", "외부 변수로 인해 경영환경이 크게 흔들리고 있어.", "https://raw.githubusercontent.com/dddowobbb/16-1/main/talking%20ceo.png")
         st.markdown("### Step 8: 돌발 변수 등장")
